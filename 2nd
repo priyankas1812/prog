@@ -1,0 +1,42 @@
+.Create and load a basic LKM into the Linux kernel, which prints a message when loaded and unloaded. 
+        sudo apt update 
+        sudo apt install build-essential linux-headers-$(uname -r) 
+ 
+       mkdir ~/basic_lkm 
+       cd ~/basic_lkm 
+ 
+       gedit hello_lkm.c 
+        #include <linux/init.h> 
+        #include <linux/module.h> 
+       #include <linux/kernel.h> 
+ 
+MODULE_LICENSE("GPL"); 
+MODULE_AUTHOR("YourName"); 
+MODULE_DESCRIPTION("A simple Hello World LKM"); 
+MODULE_VERSION("1.0"); 
+ 
+static int __init hello_lkm_init(void) { 
+    printk(KERN_INFO "Hello: LKM loaded into the kernel\n"); 
+    return 0; 
+} 
+ 
+static void __exit hello_lkm_exit(void) { 
+    printk(KERN_INFO "Goodbye: LKM unloaded from the kernel\n"); 
+} 
+ 
+module_init(hello_lkm_init); 
+module_exit(hello_lkm_exit); 
+gedit Makefile 
+obj-m += hello_lkm.o 
+all: 
+make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules 
+clean: 
+make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean 
+make 
+sudo insmod hello_lkm.ko 
+dmesg | tail -n 10 
+Hello: LKM loaded into the kernel 
+sudo rmmod hello_lkm 
+dmesg | tail -n 10 
+Goodbye: LKM unloaded from the kernel 
+make clean
