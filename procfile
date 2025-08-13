@@ -1,0 +1,90 @@
+/* proc_lkm.c
+ * Create /proc/process_list and list all processes (PID and name).
+ */
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
+#include <linux/sched/signal.h>
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("YourName");
+MODULE_DESCRIPTION("LKM that lists process names and PIDs in /proc/process_list");
+MODULE_VERSION("1.0");
+
+#define PROC_NAME "process_list"
+
+/* This function writes process info to seq_file when /proc file is read */
+static int show_processes(struct seq_file *m, void *v)
+{
+    struct task_struct *task;
+
+    seq_printf(m, "PID\tProcess Name\n");
+    for_each_process(task) {
+        seq_printf(m, "%d\t%s\n", task->pid, task->comm);
+    }
+    return 0;
+}
+
+/* open() callback uses single_open helper */
+static int proc_open(struct inode *inode, struct file *file)
+{
+    return single_open(file, show_processes, NULL);
+}
+
+/* proc_ops structure (use proc_ops for modern kernels) */
+static const struct proc_ops proc_file_ops = {
+    .proc_open    = proc_open,
+    .proc_read    = seq_read,
+    .proc_lseek   = seq_lseek,
+    .proc_release = single_release,
+};
+
+static int __init proc_lkm_init(void)
+{
+    if (!proc_create(PROC_NAME, 0, NULL, &proc_file_ops)) {
+        printk(KERN_ERR "proc_lkm: Failed to create /proc/%s\n", PROC_NAME);
+        return -ENOMEM;
+    }
+    printk(KERN_INFO "/proc/%s created\n", PROC_NAME);
+    return 0;
+}
+
+static void __exit proc_lkm_exit(void)
+{
+    remove_proc_entry(PROC_NAME, NULL);
+    printk(KERN_INFO "/proc/%s removed\n", PROC_NAME);
+}
+
+module_init(proc_lkm_init);
+module_exit(proc_lkm_exit);
+
+
+
+
+obj-m += proc_lkm.o
+
+all:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+
+clean:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
+
+
+
+make 
+
+sudo insmod proc_lkm.ko
+
+dmesg | tail -n 5
+
+cat /proc/process_list
+
+sudo rmmod proc_lkm and dmesg | tail -n 5
+
+make clean
+
+
+             
