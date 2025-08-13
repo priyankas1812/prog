@@ -1,0 +1,88 @@
+/* priority_lkm.c
+ * Change the nice (priority) value of a process identified by PID.
+ * WARNING: modifying process priority in kernel space can destabilize system.
+ */
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/sched/signal.h>
+#include <linux/moduleparam.h>
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("YourName");
+MODULE_DESCRIPTION("LKM to change process priority by PID");
+MODULE_VERSION("1.0");
+
+static int pid = -1;
+static int new_nice = 0;
+
+module_param(pid, int, 0644);
+MODULE_PARM_DESC(pid, "PID of the process to modify");
+
+module_param(new_nice, int, 0644);
+MODULE_PARM_DESC(new_nice, "New nice value (priority) for the process: -20..19");
+
+/* Called when module is loaded */
+static int __init priority_lkm_init(void)
+{
+    struct task_struct *task;
+
+    if (pid <= 0 || new_nice < -20 || new_nice > 19) {
+        printk(KERN_ERR "priority_lkm: Invalid PID or nice value (must be PID>0 and -20..19)\n");
+        return -EINVAL;
+    }
+
+    for_each_process(task) {
+        if (task->pid == pid) {
+            printk(KERN_INFO "priority_lkm: Found process %s (PID: %d), current nice: %d\n",
+                   task->comm, task->pid, task_nice(task));
+
+            /* set_user_nice is the kernel helper to change nice value */
+            set_user_nice(task, new_nice);
+            printk(KERN_INFO "priority_lkm: Priority changed, new nice value = %d\n",
+                   task_nice(task));
+            return 0;
+        }
+    }
+
+    printk(KERN_ERR "priority_lkm: Process with PID %d not found\n", pid);
+    return -ESRCH;
+}
+
+/* Called when module is removed */
+static void __exit priority_lkm_exit(void)
+{
+    printk(KERN_INFO "priority_lkm: Module unloaded\n");
+}
+
+module_init(priority_lkm_init);
+module_exit(priority_lkm_exit);
+
+
+
+
+
+
+obj-m += priority_lkm.o
+
+all:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+
+clean:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
+
+
+
+make
+
+ps aux
+ps aux | grep bash
+
+sudo insmod priority_lkm.ko pid=1234 new_nice=5
+
+dmesg | tail -n 20 
+
+sudo rmmod priority_lkm
+
+make clean
