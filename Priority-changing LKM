@@ -78,10 +78,15 @@ make
 
 ps aux
 ps aux | grep bash
+ps -o pid,comm,nice -p 1234
+top -p 1234
 
 sudo insmod priority_lkm.ko pid=1234 new_nice=5
 
 dmesg | tail -n 20 
+
+
+ps -o pid,comm,nice -p 1234
 
 sudo rmmod priority_lkm
 
