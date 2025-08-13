@@ -1,0 +1,60 @@
+/* kernel_threads_lkm.c
+ * Lists kernel threads (those with task->mm == NULL) and counts them.
+ */
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/sched/signal.h>
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("YourName");
+MODULE_DESCRIPTION("LKM to list kernel threads (task->mm == NULL)");
+MODULE_VERSION("1.0");
+
+static int __init kernel_threads_init(void)
+{
+    struct task_struct *task;
+    int count = 0;
+
+    printk(KERN_INFO "kernel_threads_lkm: Listing kernel threads (task->mm == NULL):\n");
+
+    for_each_process(task) {
+        if (task->mm == NULL) { /* kernel threads have NULL mm */
+            printk(KERN_INFO "kernel_threads_lkm: PID: %d\tName: %s\n", task->pid, task->comm);
+            count++;
+        }
+    }
+
+    printk(KERN_INFO "kernel_threads_lkm: Total kernel threads: %d\n", count);
+    return 0;
+}
+
+static void __exit kernel_threads_exit(void)
+{
+    printk(KERN_INFO "kernel_threads_lkm: Module unloaded\n");
+}
+
+module_init(kernel_threads_init);
+module_exit(kernel_threads_exit);
+
+
+obj-m += kernel_threads_lkm.o
+
+all:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+
+clean:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
+
+make
+
+sudo insmod kernel_threads_lkm.ko
+
+dmesg | tail -n 40 to see printed list and count.
+
+sudo rmmod kernel_threads_lkm
+
+make clean
+
+
