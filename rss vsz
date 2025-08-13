@@ -1,0 +1,67 @@
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/sched/signal.h> // for for_each_process
+#include <linux/mm.h>           // for get_mm_rss, mmput
+#include <linux/sched.h>        // for task_struct
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Your Name");
+MODULE_DESCRIPTION("LKM that prints PID, RSS, VSZ, CMD for processes");
+
+static int __init memory_usage_init(void) {
+    struct task_struct *task;
+
+    printk(KERN_INFO "Process Memory Usage:\n");
+    printk(KERN_INFO "PID\tRSS(bytes)\tVSZ(bytes)\tCMD\n");
+
+    for_each_process(task) {
+        struct mm_struct *mm = get_task_mm(task);
+        if (mm) {
+            unsigned long rss = get_mm_rss(mm) * PAGE_SIZE; // in bytes
+            unsigned long vsz = mm->total_vm * PAGE_SIZE;   // in bytes
+
+            printk(KERN_INFO "%d\t%lu\t%lu\t%s\n",
+                   task->pid, rss, vsz, task->comm);
+
+            mmput(mm);
+        }
+    }
+
+    return 0;
+}
+
+static void __exit memory_usage_exit(void) {
+    printk(KERN_INFO "Memory usage module unloaded\n");
+}
+
+module_init(memory_usage_init);
+module_exit(memory_usage_exit);
+
+
+
+
+obj-m += process_memory_lkm.o
+
+all:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+
+clean:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
+
+
+# Step 1: Save files
+nano process_memory_lkm.c
+nano Makefile
+
+# Step 2: Compile
+make
+
+# Step 3: Insert module
+sudo insmod process_memory_lkm.ko
+
+# Step 4: View output in kernel log
+dmesg -w
+
+# Step 5: Remove module
+sudo rmmod process_memory_lkm
