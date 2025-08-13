@@ -1,0 +1,89 @@
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/slab.h>    // kmalloc, kfree
+#include <linux/vmalloc.h> // vmalloc, vfree
+
+char *kmalloc_ptr;
+char *vmalloc_ptr;
+
+static int __init mem_alloc_lkm_init(void) {
+    printk(KERN_INFO "Initializing memory allocation LKM...\n");
+
+    // Allocate 1 KB using kmalloc (physically contiguous)
+    kmalloc_ptr = kmalloc(1024, GFP_KERNEL);
+    if (!kmalloc_ptr) {
+        printk(KERN_ERR "Failed to allocate memory using kmalloc\n");
+        return -ENOMEM;
+    }
+    snprintf(kmalloc_ptr, 1024, "Hello from kmalloc!");
+
+    // Allocate 4 KB using vmalloc (virtually contiguous)
+    vmalloc_ptr = vmalloc(4096);
+    if (!vmalloc_ptr) {
+        printk(KERN_ERR "Failed to allocate memory using vmalloc\n");
+        kfree(kmalloc_ptr);
+        return -ENOMEM;
+    }
+    snprintf(vmalloc_ptr, 4096, "Hello from vmalloc!");
+
+    printk(KERN_INFO "Memory allocation successful\n");
+    printk(KERN_INFO "kmalloc says: %s\n", kmalloc_ptr);
+    printk(KERN_INFO "vmalloc says: %s\n", vmalloc_ptr);
+
+    return 0; // Module loaded successfully
+}
+
+static void __exit mem_alloc_lkm_exit(void) {
+    kfree(kmalloc_ptr);
+    vfree(vmalloc_ptr);
+    printk(KERN_INFO "Freed kmalloc and vmalloc memory, exiting LKM...\n");
+}
+
+module_init(mem_alloc_lkm_init);
+module_exit(mem_alloc_lkm_exit);
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Your Name");
+MODULE_DESCRIPTION("LKM for comparing kmalloc and vmalloc");
+
+
+obj-m += kmalloc_vmalloc_lkm.o
+
+all:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+
+clean:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
+
+
+# Step 1: Save the file
+nano kmalloc_vmalloc_lkm.c
+
+# Step 2: Save Makefile
+nano Makefile
+
+# Step 3: Compile the module
+make
+
+# Step 4: Insert module
+sudo insmod kmalloc_vmalloc_lkm.ko
+
+# Step 5: View kernel logs
+dmesg | tail -n 20
+
+# Step 6: Remove the module
+sudo rmmod kmalloc_vmalloc_lkm
+
+# Step 7: Clean build
+make clean
+
+
+
+
+
+
+
+
+
+
