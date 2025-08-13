@@ -26,17 +26,26 @@ static void __exit hello_lkm_exit(void) {
  
 module_init(hello_lkm_init); 
 module_exit(hello_lkm_exit); 
+
+
 gedit Makefile 
+
+
 obj-m += hello_lkm.o 
 all: 
-make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules 
+        make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules 
 clean: 
-make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean 
+        make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean 
+
+
 make 
 sudo insmod hello_lkm.ko 
 dmesg | tail -n 10 
+
 Hello: LKM loaded into the kernel 
+
 sudo rmmod hello_lkm 
 dmesg | tail -n 10 
+
 Goodbye: LKM unloaded from the kernel 
 make clean
