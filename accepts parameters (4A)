@@ -1,0 +1,62 @@
+/* param_lkm.c
+ * A simple LKM that accepts integer and string parameters.
+ */
+param_lkm.c 
+
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/moduleparam.h>
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("YourName");
+MODULE_DESCRIPTION("A simple Linux driver with parameters");
+MODULE_VERSION("1.0");
+
+/* Module parameters with defaults */
+static int myint = 0;
+module_param(myint, int, 0660);
+MODULE_PARM_DESC(myint, "An integer parameter");
+
+static char *mystring = "default";
+module_param(mystring, charp, 0660);
+MODULE_PARM_DESC(mystring, "A string parameter");
+
+/* Called when module is loaded */
+static int __init param_lkm_init(void)
+{
+    printk(KERN_INFO "param_lkm: Module loaded\n");
+    printk(KERN_INFO "param_lkm: myint = %d, mystring = %s\n", myint, mystring);
+    return 0;
+}
+
+/* Called when module is removed */
+static void __exit param_lkm_exit(void)
+{
+    printk(KERN_INFO "param_lkm: Module unloaded\n");
+}
+
+module_init(param_lkm_init);
+module_exit(param_lkm_exit);
+
+
+
+
+obj-m += param_lkm.o
+
+all:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+
+clean:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
+make
+sudo insmod param_lkm.ko myint=42 mystring="hello_kernel"
+dmesg | tail -n 10
+sudo rmmod param_lkm
+dmesg | tail -n 5
+make clean
+
+
+
+
